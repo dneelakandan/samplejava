@@ -25,20 +25,33 @@ pipeline {
 
         stage('Deploy') {
             steps {
-                echo 'Deploying application container...'
+                echo 'Deploying application container as a continuous web service on port 8081...'
                 sh '''
+                    # Stop & remove any existing container instance
                     docker rm -f samplejava-app 2>/dev/null || true
-                    docker run --name samplejava-app samplejava:latest
+
+                    # Run newly built container mapped to host port 8081
+                    docker run -d --name samplejava-app -p 8081:8081 --restart unless-stopped samplejava:latest
+
+                    # Allow a moment for the server to bind
+                    sleep 3
+
+                    # Verify health check
+                    curl -f http://localhost:8081/health || exit 1
                 '''
             }
         }
     }
 
     post {
-        always {
-            echo '===================================='
-            echo 'Build and Deployment completed!'
-            echo '===================================='
+        success {
+            echo '=================================================='
+            echo 'Deployment SUCCESSFUL!'
+            echo 'Access web app at: http://localhost:8081'
+            echo '=================================================='
+        }
+        failure {
+            echo 'Deployment FAILED. Check container logs.'
         }
     }
 }
