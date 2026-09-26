@@ -2,31 +2,43 @@ pipeline {
     agent any
 
     stages {
-        stage('Compile & Test') {
+        stage('Checkout') {
             steps {
-                echo 'Building and running tests with Maven...'
+                echo 'Checking out source code from GitHub...'
+                checkout scm
+            }
+        }
+
+        stage('Build & Test') {
+            steps {
+                echo 'Building and testing application with Maven...'
                 sh 'mvn clean test'
             }
         }
 
         stage('Docker Build') {
             steps {
-                echo 'Building Docker container...'
+                echo 'Building Docker container image...'
                 sh 'docker build -t samplejava:latest .'
             }
         }
 
-        stage('Docker Run') {
+        stage('Deploy') {
             steps {
-                echo 'Running Docker container and displaying output...'
-                sh 'docker run --rm samplejava:latest'
+                echo 'Deploying application container...'
+                sh '''
+                    docker rm -f samplejava-app 2>/dev/null || true
+                    docker run --name samplejava-app samplejava:latest
+                '''
             }
         }
     }
 
     post {
         always {
-            echo 'Pipeline execution complete.'
+            echo '===================================='
+            echo 'Build and Deployment completed!'
+            echo '===================================='
         }
     }
 }
